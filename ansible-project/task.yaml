@@ -25,14 +25,12 @@
         mode: '0755'
         owner: "{{ ansible_user }}"
 
-    - name: Start ssh-agent and add key
-      shell: |
-        eval "$(ssh-agent -s)"
-        ssh-add {{ ssh_key_path }}
-        echo "export SSH_AUTH_SOCK=$SSH_AUTH_SOCK" > /tmp/ssh_env_{{ ansible_user }}
-        echo "export SSH_AGENT_PID=$SSH_AGENT_PID" >> /tmp/ssh_env_{{ ansible_user }}
-      args:
-        executable: /bin/bash
+    - name: Add GitHub to known_hosts
+      known_hosts:
+        name: github.com
+        key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
+        path: "/home/{{ ansible_user }}/.ssh/known_hosts"
+        state: present
 
     - name: Check if Git repo already initialized
       stat:
@@ -83,7 +81,7 @@
     - name: Push to origin (only if changes were committed)
       shell: |
         cd "{{ project_path }}"
-        ssh-agent bash -c 'ssh-add {{ ssh_key_path }} && git push -u origin main'
+        ssh-agent bash -c 'ssh-add {{ ssh_key_path }} || (echo "❌ ssh-add failed" && exit 1); git push -u origin main'
       when: git_status.stdout != ""
       args:
         executable: /bin/bash
