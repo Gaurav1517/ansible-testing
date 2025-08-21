@@ -82,10 +82,8 @@
 
     - name: Push to origin (only if changes were committed)
       shell: |
-        source /tmp/ssh_env_{{ ansible_user }}
         cd "{{ project_path }}"
-        git branch -M main || true
-        git push -u origin main
+        ssh-agent bash -c 'ssh-add {{ ssh_key_path }} && git push -u origin main'
       when: git_status.stdout != ""
       args:
         executable: /bin/bash
